@@ -56,3 +56,9 @@ The **keys** are what get matched against form fields. Make them descriptive and
 - `activeTab` — access the current tab when the icon is clicked
 - `scripting` — inject `content.js` into the page
 - `storage` — persist your mappings via `chrome.storage.local`
+
+## Contributing
+
+Contributions and pull requests are very welcome! If you have an idea for an improvement or run into a bug, feel free to open an issue or submit a PR.
+
+If you'd prefer to reach out directly, you can email me at [shibisoma@gmail.com](mailto:shibisoma@gmail.com) — I'm happy to help with any issues or questions you have with the extension.
