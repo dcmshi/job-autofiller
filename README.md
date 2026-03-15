@@ -57,6 +57,14 @@ The **keys** are what get matched against form fields. Make them descriptive and
 - `scripting` — inject `content.js` into the page
 - `storage` — persist your mappings via `chrome.storage.local`
 
+## Running Tests
+
+No install needed — uses Node's built-in test runner (Node 18+).
+
+```bash
+node --test tests/core.test.js
+```
+
 ## Contributing
 
 Contributions and pull requests are very welcome! If you have an idea for an improvement or run into a bug, feel free to open an issue or submit a PR.
