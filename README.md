@@ -57,6 +57,18 @@ The **keys** are what get matched against form fields. Make them descriptive and
 - `scripting` — inject `content.js` into the page
 - `storage` — persist your mappings via `chrome.storage.local`
 
+## Generating Screenshots
+
+Generates Chrome Web Store screenshots using Playwright.
+
+```bash
+npm install
+npx playwright install chromium
+node screenshots.js
+```
+
+Screenshots are saved to `screenshots/` — upload them directly to the Chrome Web Store listing.
+
 ## Building for Distribution
 
 Generates a `job-autofiller.zip` ready to upload to the Chrome Web Store. No dependencies required.
