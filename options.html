@@ -1,19 +1,331 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Autofiller Mappings</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Job Autofiller — Your Details</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet">
   <style>
-    body { font-family: sans-serif; padding: 20px; }
-    textarea { width: 100%; height: 300px; font-family: monospace; }
-    button { margin-top: 10px; padding: 10px 15px; cursor: pointer; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:           #F5F1EB;
+      --card:         #FFFFFF;
+      --text:         #1C1917;
+      --muted:        #9C948A;
+      --border:       #E7E2DA;
+      --accent:       #3A6FD8;
+      --accent-light: #EBF0FC;
+      --accent-hover: #2D5BBF;
+      --danger-hover: #FFF0F0;
+      --success:      #3A8A5C;
+      --row-bg:       #FDFCFB;
+      --shadow:       0 1px 3px rgba(0,0,0,.06), 0 8px 32px rgba(0,0,0,.07);
+    }
+
+    html {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      min-height: 100vh;
+      color: var(--text);
+    }
+
+    body {
+      padding: 48px 24px 80px;
+      animation: pageIn .35s ease both;
+    }
+
+    @keyframes pageIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .container {
+      max-width: 620px;
+      margin: 0 auto;
+    }
+
+    .header {
+      margin-bottom: 36px;
+    }
+
+    .header-top {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 10px;
+    }
+
+    .header-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 11px;
+      background: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(58,111,216,.3);
+    }
+
+    .header-icon svg {
+      width: 20px;
+      height: 20px;
+      stroke: white;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 26px;
+      font-weight: 600;
+      letter-spacing: -0.3px;
+    }
+
+    .subtitle {
+      font-size: 14px;
+      color: var(--muted);
+      line-height: 1.65;
+      font-weight: 300;
+      padding-left: 56px;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .card-header {
+      display: grid;
+      grid-template-columns: 1fr 1fr 30px;
+      gap: 12px;
+      padding: 12px 16px 10px;
+      border-bottom: 1px solid var(--border);
+      background: #FAFAF8;
+    }
+
+    .col-label {
+      font-size: 11px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--muted);
+    }
+
+    .rows {
+      padding: 6px 0;
+      min-height: 52px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 28px 16px;
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 300;
+      display: none;
+    }
+
+    .empty-state.visible {
+      display: block;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 30px;
+      gap: 12px;
+      align-items: center;
+      padding: 7px 16px;
+      border-bottom: 1px solid var(--border);
+      transition: background .12s;
+    }
+
+    .row:last-of-type {
+      border-bottom: none;
+    }
+
+    .row:hover {
+      background: #FFFEF D;
+    }
+
+    .row input {
+      width: 100%;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 11px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13.5px;
+      color: var(--text);
+      background: white;
+      transition: border-color .15s, box-shadow .15s;
+      outline: none;
+    }
+
+    .row input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-light);
+    }
+
+    .row input::placeholder {
+      color: #CCC7BF;
+      font-weight: 300;
+    }
+
+    .row input.key-input {
+      font-weight: 500;
+    }
+
+    .delete-btn {
+      width: 30px;
+      height: 30px;
+      border: none;
+      background: none;
+      cursor: pointer;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #CCC7BF;
+      transition: color .12s, background .12s;
+      flex-shrink: 0;
+    }
+
+    .delete-btn:hover {
+      color: #DC4E4E;
+      background: var(--danger-hover);
+    }
+
+    .delete-btn svg {
+      width: 14px;
+      height: 14px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2.2;
+      stroke-linecap: round;
+    }
+
+    .footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-top: 1px solid var(--border);
+      background: #FAFAF8;
+    }
+
+    .add-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: none;
+      border: 1.5px dashed var(--border);
+      border-radius: 8px;
+      padding: 7px 13px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--muted);
+      cursor: pointer;
+      transition: color .15s, border-color .15s, background .15s;
+    }
+
+    .add-btn:hover {
+      color: var(--accent);
+      border-color: var(--accent);
+      background: var(--accent-light);
+    }
+
+    .add-btn svg {
+      width: 13px;
+      height: 13px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2.5;
+      stroke-linecap: round;
+    }
+
+    .save-wrap {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .saved-msg {
+      font-size: 13px;
+      color: var(--success);
+      font-weight: 500;
+      opacity: 0;
+      transform: translateX(4px);
+      transition: opacity .2s, transform .2s;
+      pointer-events: none;
+    }
+
+    .saved-msg.visible {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    .save-btn {
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 9px 22px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13.5px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background .15s, transform .1s;
+      box-shadow: 0 2px 6px rgba(58,111,216,.25);
+    }
+
+    .save-btn:hover  { background: var(--accent-hover); }
+    .save-btn:active { transform: scale(.97); }
   </style>
 </head>
 <body>
-  <h2>Edit Your Data Mapping</h2>
-  <p>Update your JSON mapping below. The keys will be fuzzy-matched against form labels.</p>
-  <textarea id="mappingEditor"></textarea><br>
-  <button id="saveBtn">Save Mappings</button>
-  <span id="status"></span>
+  <div class="container">
+    <header class="header">
+      <div class="header-top">
+        <div class="header-icon">
+          <svg viewBox="0 0 24 24">
+            <rect x="2" y="7" width="20" height="14" rx="2"/>
+            <path d="M16 3H8a2 2 0 0 0-2 2v2h12V5a2 2 0 0 0-2-2Z"/>
+          </svg>
+        </div>
+        <h1>Your Details</h1>
+      </div>
+      <p class="subtitle">These values fill in job application forms automatically.<br>The label should match the field name you see on the form.</p>
+    </header>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="col-label">Field Label</span>
+        <span class="col-label">Your Answer</span>
+        <span></span>
+      </div>
+      <div class="rows" id="rows">
+        <p class="empty-state" id="emptyState">No fields yet — add one below.</p>
+      </div>
+      <div class="footer">
+        <button class="add-btn" id="addBtn">
+          <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+          Add a field
+        </button>
+        <div class="save-wrap">
+          <span class="saved-msg" id="savedMsg">Saved!</span>
+          <button class="save-btn" id="saveBtn">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
   <script src="options.js"></script>
 </body>
 </html>
