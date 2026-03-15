@@ -28,8 +28,36 @@ function normalize(str) {
   return (str || "").toLowerCase().replace(/[-_]/g, ' ').trim();
 }
 
+// For select elements, fuzzy-match the user's value against available option text
+function findBestOption(select, userValue) {
+  const normalizedUserValue = normalize(userValue);
+  let bestOption = null;
+  let lowestDistance = Infinity;
+
+  for (const option of select.options) {
+    const optionText  = normalize(option.text);
+    const optionValue = normalize(option.value);
+
+    // Direct substring match wins immediately
+    if (optionText.includes(normalizedUserValue) || normalizedUserValue.includes(optionText)) {
+      return option;
+    }
+
+    // Fuzzy match against both option text and option value
+    const distance = Math.min(
+      getEditDistance(normalizedUserValue, optionText),
+      getEditDistance(normalizedUserValue, optionValue)
+    );
+    if (distance < 5 && distance < lowestDistance) {
+      lowestDistance = distance;
+      bestOption = option;
+    }
+  }
+  return bestOption;
+}
+
 function autofill(userData) {
-  const inputs = document.querySelectorAll('input[type="text"], input[type="email"], input[type="tel"], input[type="url"], textarea');
+  const inputs = document.querySelectorAll('input[type="text"], input[type="email"], input[type="tel"], input[type="url"], textarea, select');
 
   inputs.forEach(input => {
     let labelText = "";
@@ -37,7 +65,7 @@ function autofill(userData) {
       const label = document.querySelector(`label[for="${input.id}"]`);
       if (label) labelText = label.innerText;
     }
-    
+
     // Combine useful attributes to check against
     const targetString = normalize(input.name + " " + input.id + " " + input.placeholder + " " + labelText);
 
@@ -47,7 +75,7 @@ function autofill(userData) {
     // Compare target against all your mapping keys
     for (const key of Object.keys(userData)) {
       const normalizedKey = normalize(key);
-      
+
       // If it's a direct substring match, prefer that immediately
       if (targetString.includes(normalizedKey)) {
         bestMatchKey = key;
@@ -57,7 +85,7 @@ function autofill(userData) {
 
       // Otherwise, check fuzzy distance
       const distance = getEditDistance(targetString, normalizedKey);
-      
+
       // Threshold for a "good enough" match. You can tweak this.
       // E.g., distance of 3 allows for minor typos or pluralization
       if (distance < 3 && distance < lowestDistance) {
@@ -67,9 +95,17 @@ function autofill(userData) {
     }
 
     if (bestMatchKey) {
-      input.value = userData[bestMatchKey];
-      input.dispatchEvent(new Event('input', { bubbles: true }));
-      input.dispatchEvent(new Event('change', { bubbles: true }));
+      if (input.tagName === 'SELECT') {
+        const bestOption = findBestOption(input, userData[bestMatchKey]);
+        if (bestOption) {
+          input.value = bestOption.value;
+          input.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      } else {
+        input.value = userData[bestMatchKey];
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+      }
     }
   });
 }
