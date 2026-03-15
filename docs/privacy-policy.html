@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy — Job Form Autofiller</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:           #F5F1EB;
+      --card:         #FFFFFF;
+      --text:         #1C1917;
+      --muted:        #9C948A;
+      --border:       #E7E2DA;
+      --accent:       #3A6FD8;
+      --accent-light: #EBF0FC;
+      --shadow:       0 1px 3px rgba(0,0,0,.06), 0 8px 32px rgba(0,0,0,.07);
+    }
+
+    html {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    body {
+      padding: 56px 24px 80px;
+      animation: pageIn .35s ease both;
+    }
+
+    @keyframes pageIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .container {
+      max-width: 680px;
+      margin: 0 auto;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 40px;
+    }
+
+    .header-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 11px;
+      background: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(58,111,216,.3);
+    }
+
+    .header-icon svg {
+      width: 22px;
+      height: 22px;
+      stroke: white;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .header-text h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 28px;
+      font-weight: 600;
+      letter-spacing: -0.3px;
+    }
+
+    .header-text p {
+      font-size: 13px;
+      color: var(--muted);
+      font-weight: 300;
+      margin-top: 3px;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      padding: 40px 44px;
+    }
+
+    .effective-date {
+      font-size: 13px;
+      color: var(--muted);
+      font-weight: 300;
+      margin-bottom: 32px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    section {
+      margin-bottom: 32px;
+    }
+
+    section:last-child {
+      margin-bottom: 0;
+    }
+
+    h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 17px;
+      font-weight: 500;
+      margin-bottom: 10px;
+      color: var(--text);
+    }
+
+    p {
+      font-size: 14.5px;
+      line-height: 1.75;
+      color: #3D3834;
+      font-weight: 300;
+    }
+
+    ul {
+      margin: 10px 0 0 4px;
+      padding-left: 18px;
+    }
+
+    ul li {
+      font-size: 14.5px;
+      line-height: 1.75;
+      color: #3D3834;
+      font-weight: 300;
+      margin-bottom: 4px;
+    }
+
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    .highlight {
+      background: var(--accent-light);
+      border-left: 3px solid var(--accent);
+      border-radius: 0 8px 8px 0;
+      padding: 14px 18px;
+      margin-top: 12px;
+      font-size: 14px;
+      line-height: 1.65;
+      color: var(--text);
+      font-weight: 400;
+    }
+
+    footer {
+      margin-top: 36px;
+      text-align: center;
+      font-size: 13px;
+      color: var(--muted);
+      font-weight: 300;
+    }
+
+    footer a {
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="header-icon">
+        <svg viewBox="0 0 24 24">
+          <rect x="2" y="7" width="20" height="14" rx="2"/>
+          <path d="M16 3H8a2 2 0 0 0-2 2v2h12V5a2 2 0 0 0-2-2Z"/>
+        </svg>
+      </div>
+      <div class="header-text">
+        <h1>Privacy Policy</h1>
+        <p>Job Form Autofiller — Chrome Extension</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <p class="effective-date">Effective date: March 15, 2026</p>
+
+      <section>
+        <h2>Overview</h2>
+        <p>Job Form Autofiller is a Chrome extension that helps you fill out job application forms automatically. Your privacy is important to us. This policy explains what data the extension handles and how it is used.</p>
+        <div class="highlight">
+          This extension does not collect, transmit, or share any personal data. All information stays on your device.
+        </div>
+      </section>
+
+      <section>
+        <h2>Data We Store</h2>
+        <p>The extension stores only the key-value mappings you configure in the Options page (e.g. your name, location, LinkedIn URL). This data is saved using Chrome's built-in <code>chrome.storage.local</code> API, which means:</p>
+        <ul>
+          <li>It is stored locally on your device only.</li>
+          <li>It is never sent to any external server or third party.</li>
+          <li>It is never used for advertising, analytics, or any purpose beyond filling in forms.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Permissions Used</h2>
+        <p>The extension requests the following Chrome permissions:</p>
+        <ul>
+          <li><strong>activeTab</strong> — to access the current tab when you click the extension icon.</li>
+          <li><strong>scripting</strong> — to inject the autofill script into the active page.</li>
+          <li><strong>storage</strong> — to save your mappings locally via <code>chrome.storage.local</code>.</li>
+        </ul>
+        <p style="margin-top: 12px;">No browsing history, form data, or page content is ever read beyond what is necessary to identify and fill matching form fields in that moment.</p>
+      </section>
+
+      <section>
+        <h2>Third-Party Services</h2>
+        <p>This extension does not integrate with or transmit data to any third-party services, analytics platforms, or APIs.</p>
+      </section>
+
+      <section>
+        <h2>Data Removal</h2>
+        <p>You can delete all stored data at any time by opening the extension's Options page, removing your mappings, and saving. You can also uninstall the extension from Chrome to remove all associated local data immediately.</p>
+      </section>
+
+      <section>
+        <h2>Changes to This Policy</h2>
+        <p>If this policy is updated, the new version will be published at this URL with a revised effective date.</p>
+      </section>
+
+      <section>
+        <h2>Contact</h2>
+        <p>If you have any questions about this privacy policy, feel free to reach out at <a href="mailto:shibisoma@gmail.com">shibisoma@gmail.com</a> or open an issue on the <a href="https://github.com/dcmshi/job-autofiller" target="_blank">GitHub repository</a>.</p>
+      </section>
+    </div>
+
+    <footer>
+      <p><a href="https://github.com/dcmshi/job-autofiller" target="_blank">Job Form Autofiller</a> &mdash; open source, built by David Shi</p>
+    </footer>
+  </div>
+</body>
+</html>
