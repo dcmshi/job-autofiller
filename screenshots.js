@@ -115,6 +115,10 @@ async function run() {
 
   await optionsPage.reload();
   await optionsPage.waitForSelector('.row');
+  // Wait for the pageIn animation (350ms) to fully complete before shooting
+  await optionsPage.waitForFunction(() =>
+    document.getAnimations().every(a => a.playState !== 'running')
+  );
   await optionsPage.screenshot({ path: path.join(OUT_DIR, 'options-page.png'), fullPage: true });
   console.log('✓ screenshots/options-page.png');
 
