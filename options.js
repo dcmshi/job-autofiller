@@ -55,6 +55,11 @@ function collectMappings() {
 const DEFAULT_MAPPINGS = {
   'first name':     '',
   'last name':      '',
+  'email':          '',
+  'phone':          '',
+  'city':           '',
+  'address':        '',
+  'postal code':    '',
   'location':       '',
   'previous company': '',
   'desired role':   '',
