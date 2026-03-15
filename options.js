@@ -52,8 +52,20 @@ function collectMappings() {
   return obj;
 }
 
-// Load on init — read from storage, empty mapping for first-time users
-chrome.storage.local.get({ userMappings: {} }, r => loadMappings(r.userMappings));
+const DEFAULT_MAPPINGS = {
+  'first name':     '',
+  'last name':      '',
+  'location':       '',
+  'previous company': '',
+  'desired role':   '',
+  'linkedin':       '',
+  'github':         '',
+  'personal website': '',
+  'portfolio':      '',
+};
+
+// Load on init — fall back to template fields for first-time users
+chrome.storage.local.get({ userMappings: DEFAULT_MAPPINGS }, r => loadMappings(r.userMappings));
 
 // Add row
 addBtn.addEventListener('click', () => {
