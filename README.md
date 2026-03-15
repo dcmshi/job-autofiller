@@ -57,6 +57,14 @@ The **keys** are what get matched against form fields. Make them descriptive and
 - `scripting` — inject `content.js` into the page
 - `storage` — persist your mappings via `chrome.storage.local`
 
+## Building for Distribution
+
+Generates a `job-autofiller.zip` ready to upload to the Chrome Web Store. No dependencies required.
+
+```bash
+node package.js
+```
+
 ## Running Tests
 
 No install needed — uses Node's built-in test runner (Node 18+).
