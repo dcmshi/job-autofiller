@@ -2,7 +2,8 @@
   "manifest_version": 3,
   "name": "Job Form Autofiller",
   "version": "1.0.0",
-  "description": "Autofills standard job application fields with fuzzy matching.",
+  "description": "Save time on job applications. Automatically fills in form fields like name, location, and LinkedIn using your saved details.",
+  "homepage_url": "https://github.com/dcmshi/job-autofiller",
   "permissions": ["activeTab", "scripting", "storage"],
   "icons": {
     "16": "icons/icon16.png",
@@ -22,11 +23,5 @@
   "background": {
     "service_worker": "background.js"
   },
-  "options_page": "options.html",
-  "web_accessible_resources": [
-    {
-      "resources": ["user-data.json"],
-      "matches": ["<all_urls>"]
-    }
-  ]
+  "options_page": "options.html"
 }
