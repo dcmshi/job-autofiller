@@ -1,6 +1,6 @@
 # Job Form Autofiller
 
-<img src="icons/base_icon.png" alt="Job Form Autofiller icon" width="128"/>
+<img src="icons/base_icon_v2.png" alt="Job Form Autofiller icon" width="128"/>
 
 A Chrome extension (Manifest V3) that automatically fills job application form fields using fuzzy key matching.
 
@@ -49,7 +49,7 @@ The **keys** are what get matched against form fields. Make them descriptive and
 | `options.html` | Options page UI |
 | `options.js` | Options page logic — loads/saves mappings to `chrome.storage.local` |
 | `user-data.example.json` | Template for personal data mappings (copy to `user-data.json`) |
-| `icons/` | Extension icons (16, 32, 48, 128px) and source `base_icon.png` |
+| `icons/` | Extension icons (16, 32, 48, 128px) and source `base_icon_v2.png` |
 
 ## Permissions Used
 
