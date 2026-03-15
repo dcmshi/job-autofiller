@@ -17,12 +17,30 @@ function updateEmptyState() {
   emptyEl.classList.toggle('visible', !hasRows);
 }
 
+const VALUE_PLACEHOLDERS = {
+  'first name':       'e.g. Jane',
+  'last name':        'e.g. Doe',
+  'email':            'e.g. jane.doe@email.com',
+  'phone':            'e.g. 416-555-0100',
+  'city':             'e.g. Toronto',
+  'address':          'e.g. 123 Main St',
+  'postal code':      'e.g. M5V 3A8',
+  'location':         'e.g. Toronto, ON',
+  'previous company': 'e.g. Acme Corp',
+  'desired role':     'e.g. Software Engineer',
+  'linkedin':         'e.g. linkedin.com/in/janedoe',
+  'github':           'e.g. github.com/janedoe',
+  'personal website': 'e.g. janedoe.dev',
+  'portfolio':        'e.g. janedoe.dev/portfolio',
+};
+
 function buildRow(key = '', value = '') {
+  const valPlaceholder = VALUE_PLACEHOLDERS[key] ?? 'e.g. Jane';
   const row = document.createElement('div');
   row.className = 'row';
   row.innerHTML = `
     <input class="key-input" type="text" placeholder="e.g. first name" value="${escHtml(key)}">
-    <input class="val-input" type="text" placeholder="e.g. Jane" value="${escHtml(value)}">
+    <input class="val-input" type="text" placeholder="${escHtml(valPlaceholder)}" value="${escHtml(value)}">
     <button class="delete-btn" title="Remove field">
       <svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
     </button>
