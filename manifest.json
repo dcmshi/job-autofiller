@@ -1,0 +1,20 @@
+{
+  "manifest_version": 3,
+  "name": "Job Form Autofiller",
+  "version": "1.1",
+  "description": "Autofills standard job application fields with fuzzy matching.",
+  "permissions": ["activeTab", "scripting", "storage"],
+  "action": {
+    "default_title": "Autofill Form"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "options_page": "options.html",
+  "web_accessible_resources": [
+    {
+      "resources": ["user-data.json"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}
