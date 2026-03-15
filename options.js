@@ -35,7 +35,7 @@ const VALUE_PLACEHOLDERS = {
 };
 
 function buildRow(key = '', value = '') {
-  const valPlaceholder = VALUE_PLACEHOLDERS[key] ?? 'e.g. Jane';
+  const valPlaceholder = VALUE_PLACEHOLDERS[key] ?? 'Enter a value';
   const row = document.createElement('div');
   row.className = 'row';
   row.innerHTML = `
