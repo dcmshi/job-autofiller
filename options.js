@@ -52,15 +52,8 @@ function collectMappings() {
   return obj;
 }
 
-// Load on init — prefer chrome.storage, fall back to user-data.json defaults
-fetch(chrome.runtime.getURL('user-data.json'))
-  .then(r => r.json())
-  .then(defaults => {
-    chrome.storage.local.get({ userMappings: defaults }, r => loadMappings(r.userMappings));
-  })
-  .catch(() => {
-    chrome.storage.local.get({ userMappings: {} }, r => loadMappings(r.userMappings));
-  });
+// Load on init — read from storage, empty mapping for first-time users
+chrome.storage.local.get({ userMappings: {} }, r => loadMappings(r.userMappings));
 
 // Add row
 addBtn.addEventListener('click', () => {
