@@ -119,8 +119,8 @@ async function run() {
   await optionsPage.waitForFunction(() =>
     document.getAnimations().every(a => a.playState !== 'running')
   );
-  await optionsPage.screenshot({ path: path.join(OUT_DIR, 'options-page.png'), fullPage: true });
-  console.log('✓ screenshots/options-page.png');
+  await optionsPage.screenshot({ path: path.join(OUT_DIR, 'options-page.jpg'), type: 'jpeg', quality: 95 });
+  console.log('✓ screenshots/options-page.jpg');
 
   // ── Screenshot 2: Autofill in use ───────────────────────────────────────────
   const formPage = await context.newPage();
@@ -164,8 +164,8 @@ async function run() {
     });
   }, SAMPLE_MAPPINGS);
 
-  await formPage.screenshot({ path: path.join(OUT_DIR, 'autofill-in-use.png'), fullPage: true });
-  console.log('✓ screenshots/autofill-in-use.png');
+  await formPage.screenshot({ path: path.join(OUT_DIR, 'autofill-in-use.jpg'), type: 'jpeg', quality: 95 });
+  console.log('✓ screenshots/autofill-in-use.jpg');
 
   await context.close();
   console.log('\nDone! Upload the files in screenshots/ to the Chrome Web Store listing.');
