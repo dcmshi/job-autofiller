@@ -1,8 +1,11 @@
-const rowsEl    = document.getElementById('rows');
-const emptyEl   = document.getElementById('emptyState');
-const addBtn    = document.getElementById('addBtn');
-const saveBtn   = document.getElementById('saveBtn');
-const savedMsg  = document.getElementById('savedMsg');
+const rowsEl      = document.getElementById('rows');
+const emptyEl     = document.getElementById('emptyState');
+const addBtn      = document.getElementById('addBtn');
+const saveBtn     = document.getElementById('saveBtn');
+const savedMsg    = document.getElementById('savedMsg');
+const importBtn   = document.getElementById('importBtn');
+const importFile  = document.getElementById('importFile');
+const exportBtn   = document.getElementById('exportBtn');
 
 function escHtml(str) {
   return String(str)
@@ -89,6 +92,37 @@ const DEFAULT_MAPPINGS = {
 
 // Load on init — fall back to template fields for first-time users
 chrome.storage.local.get({ userMappings: DEFAULT_MAPPINGS }, r => loadMappings(r.userMappings));
+
+// Import JSON
+importBtn.addEventListener('click', () => importFile.click());
+importFile.addEventListener('change', () => {
+  const file = importFile.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (typeof data !== 'object' || Array.isArray(data)) throw new Error();
+      loadMappings(data);
+    } catch {
+      alert('Invalid JSON — expected an object like { "first name": "Jane", ... }');
+    }
+  };
+  reader.readAsText(file);
+  importFile.value = '';
+});
+
+// Export JSON
+exportBtn.addEventListener('click', () => {
+  const data = JSON.stringify(collectMappings(), null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'user-data.json';
+  a.click();
+  URL.revokeObjectURL(url);
+});
 
 // Add row
 addBtn.addEventListener('click', () => {

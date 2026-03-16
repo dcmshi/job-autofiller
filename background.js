@@ -1,6 +1,6 @@
 chrome.action.onClicked.addListener((tab) => {
   chrome.scripting.executeScript({
-    target: { tabId: tab.id },
+    target: { tabId: tab.id, allFrames: true },
     files: ['core.js', 'content.js']
   }, () => {
     if (chrome.runtime.lastError) {

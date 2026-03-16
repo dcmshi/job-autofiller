@@ -215,9 +215,17 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
+      gap: 8px;
       padding: 12px 16px;
       border-top: 1px solid var(--border);
       background: #FAFAF8;
+      flex-wrap: wrap;
+    }
+
+    .footer-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
 
     .add-btn {
@@ -288,6 +296,24 @@
 
     .save-btn:hover  { background: var(--accent-hover); }
     .save-btn:active { transform: scale(.97); }
+
+    .export-btn {
+      background: none;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      padding: 9px 16px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13.5px;
+      font-weight: 500;
+      color: var(--muted);
+      cursor: pointer;
+      transition: color .15s, border-color .15s;
+    }
+
+    .export-btn:hover {
+      color: var(--text);
+      border-color: #C4BEB6;
+    }
   </style>
 </head>
 <body>
@@ -315,11 +341,19 @@
         <p class="empty-state" id="emptyState">No fields yet — add one below.</p>
       </div>
       <div class="footer">
-        <button class="add-btn" id="addBtn">
-          <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-          Add a field
-        </button>
+        <div class="footer-left">
+          <button class="add-btn" id="addBtn">
+            <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+            Add a field
+          </button>
+          <button class="add-btn" id="importBtn">
+            <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Import JSON
+          </button>
+          <input type="file" id="importFile" accept=".json" style="display:none">
+        </div>
         <div class="save-wrap">
+          <button class="export-btn" id="exportBtn">Export</button>
           <span class="saved-msg" id="savedMsg">Saved!</span>
           <button class="save-btn" id="saveBtn">Save</button>
         </div>
