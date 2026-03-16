@@ -47,7 +47,13 @@ function autofill(userData) {
           input.dispatchEvent(new Event('change', { bubbles: true }));
         }
       } else {
-        input.value = userData[bestMatchKey];
+        const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set
+          || Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set;
+        if (nativeSetter) {
+          nativeSetter.call(input, userData[bestMatchKey]);
+        } else {
+          input.value = userData[bestMatchKey];
+        }
         input.dispatchEvent(new Event('input', { bubbles: true }));
         input.dispatchEvent(new Event('change', { bubbles: true }));
       }

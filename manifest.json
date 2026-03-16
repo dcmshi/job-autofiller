@@ -1,10 +1,11 @@
 {
   "manifest_version": 3,
   "name": "Job Form Autofiller",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Save time on job applications. Automatically fills in form fields like name, location, and LinkedIn using your saved details.",
   "homepage_url": "https://github.com/dcmshi/job-autofiller",
   "permissions": ["activeTab", "scripting", "storage"],
+  "host_permissions": ["<all_urls>"],
   "icons": {
     "16": "icons/icon16.png",
     "32": "icons/icon32.png",
