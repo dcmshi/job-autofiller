@@ -12,6 +12,7 @@ const fs   = require('fs');
 const EXT_PATH = path.resolve(__dirname);
 const OUT_DIR  = path.resolve(__dirname, 'screenshots');
 
+// Fictional sample data — these screenshots are public on the store listing
 const SAMPLE_MAPPINGS = {
   'first name':       'Jane',
   'last name':        'Doe',
