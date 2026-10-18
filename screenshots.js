@@ -3,7 +3,8 @@
 //   npm install
 //   npx playwright install chromium
 //   node screenshots.js
-// Output: screenshots/options-page.png, screenshots/autofill-in-use.png
+// Output (all JPEG): screenshots/options-page.jpg, screenshots/autofill-in-use.jpg (1280×800),
+//   screenshots/promo-small.jpg (440×280), screenshots/promo-marquee.jpg (1400×560)
 
 const { chromium } = require('playwright');
 const path = require('path');
@@ -87,6 +88,92 @@ const MOCK_FORM = `<!DOCTYPE html>
 </body>
 </html>`;
 
+// ── Promo tiles ──────────────────────────────────────────────────────────────
+// Same palette and fonts as the options page. The icon is inlined as a data
+// URI because setContent pages can't load local files.
+
+const ICON_URI = 'data:image/png;base64,' +
+  fs.readFileSync(path.join(EXT_PATH, 'icons/base_icon_v2.png')).toString('base64');
+
+const TILE_BASE = `
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; overflow: hidden; }
+    body {
+      font-family: 'DM Sans', sans-serif; color: #fff;
+      background: radial-gradient(120% 140% at 0% 0%, #4A7FE6 0%, #3A6FD8 45%, #2D5BBF 100%);
+    }
+    .icon { background: #fff; border-radius: 50%; box-shadow: 0 8px 24px rgba(10, 30, 80, .25); }
+    .title { font-family: 'Playfair Display', serif; font-weight: 600; letter-spacing: -.01em; }
+    .tagline { color: rgba(255, 255, 255, .88); }
+  </style>`;
+
+const SMALL_TILE = `<!DOCTYPE html><html><head>${TILE_BASE}
+  <style>
+    body { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-align: center; }
+    .icon { width: 96px; height: 96px; }
+    .title { font-size: 32px; }
+    .tagline { font-size: 17px; }
+  </style></head>
+  <body>
+    <img class="icon" src="${ICON_URI}">
+    <div class="title">Job Form Autofiller</div>
+    <div class="tagline">Job applications, filled in one click</div>
+  </body></html>`;
+
+const MARQUEE_TILE = `<!DOCTYPE html><html><head>${TILE_BASE}
+  <style>
+    body { display: flex; align-items: center; justify-content: space-between; padding: 0 110px; }
+    .copy { display: flex; flex-direction: column; gap: 22px; max-width: 600px; }
+    .brand { display: flex; align-items: center; gap: 22px; }
+    .icon { width: 96px; height: 96px; }
+    .title { font-size: 58px; line-height: 1.05; }
+    .tagline { font-size: 26px; line-height: 1.4; }
+    .boards { font-size: 17px; font-weight: 500; color: rgba(255, 255, 255, .7); letter-spacing: .02em; }
+
+    .card {
+      width: 470px; background: #fff; color: #1C1917; border-radius: 18px; padding: 30px 30px 26px;
+      box-shadow: 0 30px 60px rgba(10, 30, 80, .35); transform: rotate(-2.5deg);
+      display: flex; flex-direction: column; gap: 16px;
+    }
+    .card h3 { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 600; margin-bottom: 2px; }
+    .field label { display: block; font-size: 13px; font-weight: 500; color: #6B645C; margin-bottom: 6px; }
+    .input {
+      display: flex; align-items: center; justify-content: space-between;
+      height: 42px; padding: 0 14px; border-radius: 9px; font-size: 16px;
+      background: #EBF0FC; border: 1.5px solid #3A6FD8;
+    }
+    .check { color: #3A8A5C; font-weight: 600; }
+    .choices { display: flex; gap: 10px; }
+    .choice { flex: 1; height: 40px; border-radius: 9px; border: 1.5px solid #E7E2DA; display: flex; align-items: center; justify-content: center; font-size: 15px; color: #6B645C; }
+    .choice.on { background: #3A6FD8; border-color: #3A6FD8; color: #fff; font-weight: 600; }
+  </style></head>
+  <body>
+    <div class="copy">
+      <div class="brand"><img class="icon" src="${ICON_URI}"><div class="title">Job Form<br>Autofiller</div></div>
+      <div class="tagline">Save your details once.<br>Fill any job application in one click.</div>
+      <div class="boards">Greenhouse · Lever · Ashby · Workable</div>
+    </div>
+    <div class="card">
+      <h3>Apply for this job</h3>
+      <div class="field"><label>Full name</label><div class="input">Jane Doe<span class="check">✓</span></div></div>
+      <div class="field"><label>Email</label><div class="input">jane.doe@example.com<span class="check">✓</span></div></div>
+      <div class="field"><label>LinkedIn profile</label><div class="input">linkedin.com/in/jane-doe-sample<span class="check">✓</span></div></div>
+      <div class="field"><label>Are you authorized to work in Canada?</label>
+        <div class="choices"><div class="choice on">Yes</div><div class="choice">No</div></div></div>
+    </div>
+  </body></html>`;
+
+async function renderTile(browser, html, width, height, file) {
+  const page = await browser.newPage({ viewport: { width, height } });
+  await page.setContent(html, { waitUntil: 'networkidle' });
+  await page.evaluate(() => document.fonts.ready);
+  await page.screenshot({ path: path.join(OUT_DIR, file), type: 'jpeg', quality: 95 });
+  await page.close();
+  console.log(`✓ screenshots/${file}`);
+}
+
 async function run() {
   fs.mkdirSync(OUT_DIR, { recursive: true });
 
@@ -141,6 +228,12 @@ async function run() {
   console.log('✓ screenshots/autofill-in-use.jpg');
 
   await context.close();
+
+  // ── Promo tiles: plain pages, no extension needed ─────────────────────────
+  const browser = await chromium.launch();
+  await renderTile(browser, SMALL_TILE, 440, 280, 'promo-small.jpg');
+  await renderTile(browser, MARQUEE_TILE, 1400, 560, 'promo-marquee.jpg');
+  await browser.close();
   console.log('\nDone! Upload the files in screenshots/ to the Chrome Web Store listing.');
 }
 
