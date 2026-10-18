@@ -90,8 +90,11 @@ const DEFAULT_MAPPINGS = {
   'portfolio':      '',
 };
 
-// Load on init — fall back to template fields for first-time users
-chrome.storage.local.get({ userMappings: DEFAULT_MAPPINGS }, r => loadMappings(r.userMappings));
+// Load on init — fall back to template fields for first-time users. The
+// fallback is applied here rather than as a get() default, because Chrome
+// deep-merges object defaults into the stored object, which would bring back
+// default rows the user deleted.
+chrome.storage.local.get('userMappings', r => loadMappings(r.userMappings ?? DEFAULT_MAPPINGS));
 
 // Import JSON
 importBtn.addEventListener('click', () => importFile.click());
