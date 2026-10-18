@@ -24,7 +24,7 @@ const VALUE_PLACEHOLDERS = {
   'first name':       'e.g. Jane',
   'last name':        'e.g. Doe',
   'email':            'e.g. jane.doe@email.com',
-  'phone':            'e.g. 416-555-0100',
+  'phone':            'e.g. +1 416-555-0100',
   'city':             'e.g. Toronto',
   'address':          'e.g. 123 Main St',
   'postal code':      'e.g. M5V 3A8',

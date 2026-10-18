@@ -22,21 +22,20 @@ function getFillableFields(root) {
   );
 }
 
-// Text inside `container` that isn't inside the field itself (skips <option> text)
-function getOwnText(container, field) {
+// Text inside `container` that isn't inside any of the `excluded` elements
+// (e.g. the field itself, so a wrapped <select> doesn't contribute its options)
+function getOwnText(container, ...excluded) {
   const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
   let text = '';
   while (walker.nextNode()) {
-    if (!field.contains(walker.currentNode)) text += ' ' + walker.currentNode.textContent;
+    if (!excluded.some(el => el.contains(walker.currentNode))) text += ' ' + walker.currentNode.textContent;
   }
   return text.trim().slice(0, MAX_LABEL_LENGTH);
 }
 
-function getLabelText(el) {
+// aria-label plus the text of every aria-labelledby reference
+function getAriaText(el) {
   const parts = [];
-  // Covers both <label for="..."> and <label> wrapping the field
-  for (const label of el.labels || []) parts.push(getOwnText(label, el));
-
   const ariaLabel = el.getAttribute('aria-label');
   if (ariaLabel) parts.push(ariaLabel);
 
@@ -48,6 +47,14 @@ function getLabelText(el) {
       if (ref) parts.push(ref.textContent);
     }
   }
+  return parts.join(' ').trim();
+}
+
+function getLabelText(el) {
+  const parts = [];
+  // Covers both <label for="..."> and <label> wrapping the field
+  for (const label of el.labels || []) parts.push(getOwnText(label, el));
+  parts.push(getAriaText(el));
   if (parts.some(p => p.trim())) return parts.join(' ');
 
   // A <legend> only describes this field if the fieldset holds nothing else
@@ -176,6 +183,66 @@ async function fillCombobox(input, value) {
   if (!await waitFor(() => pickFromMenu(input, value, staleMenus), 3000, root)) input.blur();
 }
 
+// Radio buttons grouped by name, per form (or per document/shadow root
+// for radios outside a form). Unnamed radios have no group and are ignored.
+function getRadioGroups(root) {
+  const scopes = new Map();
+  for (const radio of queryAllDeep(root, 'input[type="radio"]')) {
+    if (!radio.name) continue;
+    const scope = radio.form || radio.getRootNode();
+    if (!scopes.has(scope)) scopes.set(scope, new Map());
+    const groups = scopes.get(scope);
+    if (!groups.has(radio.name)) groups.set(radio.name, []);
+    groups.get(radio.name).push(radio);
+  }
+  return [...scopes.values()].flatMap(groups => [...groups.values()]);
+}
+
+function getRadioOptionText(radio) {
+  const labelText = Array.from(radio.labels || []).map(label => getOwnText(label, radio)).join(' ');
+  return labelText.trim() || getAriaText(radio) || radio.value;
+}
+
+// The question a radio group answers: a fieldset <legend>, a
+// role="radiogroup" label, or nearby text that isn't one of the options
+function getRadioGroupQuestion(radios) {
+  // Smallest element containing every radio in the group
+  let container = radios[0].parentElement;
+  while (container && !radios.every(r => container.contains(r))) container = container.parentElement;
+
+  const optionLabels = radios.flatMap(r => Array.from(r.labels || []));
+  for (let el = container, depth = 0; el && depth < 4; el = el.parentElement, depth++) {
+    const legend = el.tagName === 'FIELDSET' && el.querySelector('legend');
+    if (legend) return legend.textContent;
+    if (el.getAttribute('role') === 'radiogroup' && getAriaText(el)) return getAriaText(el);
+
+    // Past this point the text could belong to some other question
+    const otherRadios = queryAllDeep(el, 'input[type="radio"]').some(r => !radios.includes(r));
+    if (otherRadios || getFillableFields(el).length) break;
+    const text = getOwnText(el, ...radios, ...optionLabels);
+    if (text) return text;
+  }
+  return '';
+}
+
+function shouldSkipRadioGroup(radios) {
+  // A choice other than the page's own default means the user picked it
+  if (radios.some(r => r.checked && !r.defaultChecked)) return true;
+  // Styled radios often hide the <input> and show only its label
+  const visible = radios.some(r => isVisible(r) ||
+    Array.from(r.labels || []).some(label => label.checkVisibility()));
+  return !visible || radios.every(r => r.disabled);
+}
+
+function fillRadioGroup(radios, value) {
+  const options = radios
+    .filter(r => !r.disabled)
+    .map(r => ({ text: getRadioOptionText(r), value: r.value, el: r }));
+  const best = findBestOption(options, value);
+  // click() checks the radio and fires click/input/change like a real click
+  if (best && !best.el.checked) best.el.click();
+}
+
 async function autofill(userData) {
   const preparedKeys = prepareKeys(userData);
   const comboboxes = [];
@@ -200,6 +267,16 @@ async function autofill(userData) {
     } else {
       fillText(el, userData[key]);
     }
+  }
+
+  for (const radios of getRadioGroups(document)) {
+    if (shouldSkipRadioGroup(radios)) continue;
+    const signals = buildSignals({
+      name:  radios[0].name,
+      label: getRadioGroupQuestion(radios),
+    });
+    const key = findBestKey(signals, preparedKeys);
+    if (key) fillRadioGroup(radios, userData[key]);
   }
 
   // One at a time — open menus would otherwise compete for the same listbox

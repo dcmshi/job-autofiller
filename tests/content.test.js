@@ -364,3 +364,168 @@ describe('Matching 8: shadow DOM, listbox lookup, menus that open synchronously'
     await page.close();
   });
 });
+
+describe('Radio buttons', () => {
+  const RADIO_MAPPINGS = {
+    ...MAPPINGS,
+    'how did you hear': 'Welcome to the Jungle',
+    'french level': 'Bilingue',
+    'authorized to work': 'Yes',
+    'require sponsorship': 'No',
+  };
+  const run = html => runAutofill(html, { mappings: RADIO_MAPPINGS });
+  const checkedValue = (page, name) =>
+    page.$eval(`input[name="${name}"]:checked`, el => el.value).catch(() => null);
+
+  test('Teamtailor-style fieldset + legend with label[for] options', async () => {
+    const page = await run(`
+      <form>
+        <fieldset>
+          <legend><span>How did you hear about us?<sup aria-hidden="true">*</sup><span>Required</span></span></legend>
+          <div><input type="radio" name="c[0][choice]" id="o1" value="1"><label for="o1">LinkedIn</label></div>
+          <div><input type="radio" name="c[0][choice]" id="o2" value="2"><label for="o2">Welcome to the Jungle</label></div>
+          <div><input type="radio" name="c[0][choice]" id="o3" value="3"><label for="o3">Indeed</label></div>
+        </fieldset>
+        <fieldset>
+          <legend>French level</legend>
+          <label><input type="radio" name="c[1][choice]" value="1"> Intermédiaire</label>
+          <label><input type="radio" name="c[1][choice]" value="2"> Bilingue</label>
+          <label><input type="radio" name="c[1][choice]" value="3"> Natif</label>
+        </fieldset>
+      </form>
+    `);
+    assert.equal(await checkedValue(page, 'c[0][choice]'), '2');
+    assert.equal(await checkedValue(page, 'c[1][choice]'), '2');
+    await page.close();
+  });
+
+  test('role="radiogroup" labelled by aria-labelledby', async () => {
+    const page = await run(`
+      <p id="q">Are you authorized to work in Canada?</p>
+      <div role="radiogroup" aria-labelledby="q">
+        <label><input type="radio" name="auth" value="y"> Yes</label>
+        <label><input type="radio" name="auth" value="n"> No</label>
+      </div>
+    `);
+    assert.equal(await checkedValue(page, 'auth'), 'y');
+    await page.close();
+  });
+
+  test('question taken from nearby text, not from the option labels', async () => {
+    const page = await run(`
+      <div class="question">
+        <p>Will you now or in the future require sponsorship?</p>
+        <label><input type="radio" name="spons" value="yes"> Yes</label>
+        <label><input type="radio" name="spons" value="no"> No</label>
+      </div>
+      <div class="question">
+        <p>Are you authorized to work here?</p>
+        <label><input type="radio" name="auth" value="yes"> Yes</label>
+        <label><input type="radio" name="auth" value="no"> No</label>
+      </div>
+    `);
+    assert.equal(await checkedValue(page, 'spons'), 'no');
+    assert.equal(await checkedValue(page, 'auth'), 'yes');
+    await page.close();
+  });
+
+  test('a "Yes" answer does not pick "Yes, with sponsorship"', async () => {
+    const page = await run(`
+      <fieldset><legend>Authorized to work</legend>
+        <label><input type="radio" name="a" value="1"> Yes, with sponsorship</label>
+        <label><input type="radio" name="a" value="2"> Yes</label>
+        <label><input type="radio" name="a" value="3"> No</label>
+      </fieldset>
+    `);
+    assert.equal(await checkedValue(page, 'a'), '2');
+    await page.close();
+  });
+
+  test('fires click, input and change events', async () => {
+    const page = await run(`
+      <fieldset><legend>French level</legend>
+        <label><input type="radio" name="f" value="b"> Bilingue</label>
+      </fieldset>
+      <script>
+        const r = document.querySelector('input[name=f]');
+        r.dataset.events = '';
+        for (const t of ['click', 'input', 'change']) r.addEventListener(t, () => r.dataset.events += t + ' ');
+      </script>
+    `);
+    assert.equal(await page.$eval('input[name=f]', r => r.dataset.events.trim()), 'click input change');
+    await page.close();
+  });
+
+  test('custom-styled radios with a hidden <input> are still filled', async () => {
+    const page = await run(`
+      <fieldset><legend>French level</legend>
+        <label><input type="radio" name="f" value="1" style="position:absolute;opacity:0;width:0;height:0"> <span>Natif</span></label>
+        <label><input type="radio" name="f" value="2" style="position:absolute;opacity:0;width:0;height:0"> <span>Bilingue</span></label>
+      </fieldset>
+    `);
+    assert.equal(await checkedValue(page, 'f'), '2');
+    await page.close();
+  });
+
+  test('keeps an answer the user already picked, overrides the page default', async () => {
+    const page = await run(`
+      <fieldset><legend>French level</legend>
+        <label><input type="radio" name="picked" value="1"> Natif</label>
+        <label><input type="radio" name="picked" value="2"> Bilingue</label>
+      </fieldset>
+      <fieldset><legend>Authorized to work</legend>
+        <label><input type="radio" name="dflt" value="no" checked> No</label>
+        <label><input type="radio" name="dflt" value="yes"> Yes</label>
+      </fieldset>
+      <script>document.querySelector('input[name=picked][value="1"]').checked = true;</script>
+    `);
+    assert.equal(await checkedValue(page, 'picked'), '1');
+    assert.equal(await checkedValue(page, 'dflt'), 'yes');
+    await page.close();
+  });
+
+  test('skips disabled options, hidden groups, and groups with no matching option', async () => {
+    const page = await run(`
+      <fieldset><legend>French level</legend>
+        <label><input type="radio" name="dis" value="2" disabled> Bilingue</label>
+        <label><input type="radio" name="dis" value="1"> Natif</label>
+      </fieldset>
+      <fieldset style="display:none"><legend>Authorized to work</legend>
+        <label><input type="radio" name="hidden" value="yes"> Yes</label>
+      </fieldset>
+      <fieldset><legend>Require sponsorship</legend>
+        <label><input type="radio" name="nomatch" value="1"> Maybe later</label>
+      </fieldset>
+    `);
+    assert.equal(await checkedValue(page, 'dis'), null);
+    assert.equal(await checkedValue(page, 'hidden'), null);
+    assert.equal(await checkedValue(page, 'nomatch'), null);
+    await page.close();
+  });
+
+  test('same radio name in two forms is treated as two groups', async () => {
+    const page = await run(`
+      <form id="f1"><fieldset><legend>Authorized to work</legend>
+        <label><input type="radio" name="q" value="yes"> Yes</label><label><input type="radio" name="q" value="no"> No</label>
+      </fieldset></form>
+      <form id="f2"><fieldset><legend>Require sponsorship</legend>
+        <label><input type="radio" name="q" value="yes"> Yes</label><label><input type="radio" name="q" value="no"> No</label>
+      </fieldset></form>
+    `);
+    assert.equal(await page.$eval('#f1 input:checked', el => el.value), 'yes');
+    assert.equal(await page.$eval('#f2 input:checked', el => el.value), 'no');
+    await page.close();
+  });
+
+  test('a text field next to a radio group keeps its own label', async () => {
+    const page = await run(`
+      <div><label for="fn">First Name</label><input id="fn"></div>
+      <fieldset><legend>French level</legend>
+        <label><input type="radio" name="f" value="2"> Bilingue</label>
+      </fieldset>
+    `);
+    assert.equal(await valueOf(page, '#fn'), 'Jane');
+    assert.equal(await checkedValue(page, 'f'), '2');
+    await page.close();
+  });
+});

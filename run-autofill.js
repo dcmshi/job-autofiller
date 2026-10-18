@@ -99,6 +99,22 @@ async function report(page) {
           const value = el.tagName === 'SELECT' ? (el.selectedOptions[0] || {}).text || '' : el.value;
           return { label: label.replace(/\s+/g, ' ').trim().slice(0, 50), value };
         }));
+      // One row per radio group: the question (fieldset legend or name) and the checked option
+      fields.push(...await frame.$$eval('input[type="radio"][name]', radios => {
+        const groups = new Map();
+        for (const r of radios) {
+          if (!groups.has(r.name)) groups.set(r.name, []);
+          groups.get(r.name).push(r);
+        }
+        return [...groups.entries()].map(([name, group]) => {
+          const legend = group[0].closest('fieldset')?.querySelector('legend');
+          const checked = group.find(r => r.checked);
+          return {
+            label: '(radio) ' + ((legend && legend.textContent) || name).replace(/\s+/g, ' ').trim().slice(0, 42),
+            value: checked ? ((checked.labels[0] && checked.labels[0].textContent) || checked.value).trim() : '',
+          };
+        });
+      }));
     } catch {
       continue; // frame navigated or detached
     }

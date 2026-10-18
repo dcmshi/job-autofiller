@@ -414,3 +414,37 @@ describe('Matching 8: signal hygiene and option edge cases', () => {
     assert.equal(findBestOption(options, 'Canada'), options[1]);
   });
 });
+
+describe('findBestOption: exact, whole-word, then length-scaled fuzzy', () => {
+  test('an exact match beats an earlier option that merely contains the value', () => {
+    const select = mockSelect([['Yes, with sponsorship', 'a'], ['Yes', 'b']]);
+    assert.equal(findBestOption(select, 'Yes').value, 'b');
+  });
+
+  test('"No" does not match inside "I do not ..."', () => {
+    const select = mockSelect([['I do not wish to answer', 'decline'], ['No', 'no'], ['Yes', 'yes']]);
+    assert.equal(findBestOption(select, 'No').value, 'no');
+  });
+
+  test('"No" does not match "Non-binary" or "None"', () => {
+    const select = mockSelect([['Non-binary', 'nb'], ['None', 'none']]);
+    assert.equal(findBestOption(select, 'No'), null);
+  });
+
+  test('whole-word containment works in both directions', () => {
+    const options = [{ text: 'Native', value: '' }, { text: 'Bilingual', value: '' }];
+    assert.equal(findBestOption(options, 'Bilingual (French/English)'), options[1]);
+    assert.equal(findBestOption(mockSelect([['Canada +1', 'CA']]), 'Canada').value, 'CA');
+  });
+
+  test('short values never fuzzy-match short options ("SWE" is not "Yes")', () => {
+    const select = mockSelect([['Yes', 'yes'], ['No', 'no']]);
+    assert.equal(findBestOption(select, 'SWE'), null);
+  });
+
+  test('typos in longer values still match', () => {
+    const select = mockSelect([['Intermediate', '1'], ['Fluent', '2']]);
+    assert.equal(findBestOption(select, 'Intermediat').value, '1');
+    assert.equal(findBestOption(mockSelect([['Canada', 'CA']]), 'Canda').value, 'CA');
+  });
+});

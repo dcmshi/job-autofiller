@@ -194,34 +194,40 @@ function findBestKey(signals, preparedKeys) {
   return bestKey;
 }
 
-// Fuzzy-match the user's value against a <select> (or any list of
-// { text, value } options, e.g. a combobox menu)
+// Match the user's value against a <select> (or any list of { text, value }
+// options, e.g. a combobox menu or radio group), in order of preference:
+// 1. exact text or value
+// 2. whole-word containment either way ("Canada" ~ "Canada +1"), so "No"
+//    never matches inside "I do not ..."
+// 3. a fuzzy distance scaled to the value's length (up to 4 edits), so short
+//    values like "SWE" can't drift onto "Yes"
 function findBestOption(selectOrOptions, userValue) {
   const normalizedUserValue = normalize(userValue);
   if (!normalizedUserValue) return null;
-  const options = Array.from(selectOrOptions.options || selectOrOptions);
+  const options = Array.from(selectOrOptions.options || selectOrOptions)
+    .map(option => ({ option, text: normalize(option.text), value: normalize(option.value) }))
+    // Blank placeholder options ("", "--") would match everything
+    .filter(o => o.text || o.value);
+
+  const exact = options.find(o => o.text === normalizedUserValue || o.value === normalizedUserValue);
+  if (exact) return exact.option;
+
+  const containing = options.find(o => o.text &&
+    (termMatch(o.text, normalizedUserValue, false) || termMatch(normalizedUserValue, o.text, false)));
+  if (containing) return containing.option;
+
+  const allowed = Math.min(4, Math.floor(normalizedUserValue.length / 3));
   let bestOption = null;
   let lowestDistance = Infinity;
-
-  for (const option of options) {
-    const optionText  = normalize(option.text);
-    const optionValue = normalize(option.value);
-    // Blank placeholder options ("", "--") would substring-match everything
-    if (!optionText && !optionValue) continue;
-
-    // Direct substring match wins immediately
-    if (optionText && (optionText.includes(normalizedUserValue) || normalizedUserValue.includes(optionText))) {
-      return option;
-    }
-
+  for (const o of options) {
     // Fuzzy match against both option text and option value
     const distance = Math.min(
-      getEditDistance(normalizedUserValue, optionText),
-      optionValue ? getEditDistance(normalizedUserValue, optionValue) : Infinity
+      o.text ? getEditDistance(normalizedUserValue, o.text, allowed) : Infinity,
+      o.value ? getEditDistance(normalizedUserValue, o.value, allowed) : Infinity
     );
-    if (distance < 5 && distance < lowestDistance) {
+    if (distance <= allowed && distance < lowestDistance) {
       lowestDistance = distance;
-      bestOption = option;
+      bestOption = o.option;
     }
   }
   return bestOption;
