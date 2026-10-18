@@ -126,43 +126,15 @@ async function run() {
   const formPage = await context.newPage();
   await formPage.setContent(MOCK_FORM, { waitUntil: 'domcontentloaded' });
 
-  // Inject core.js globals, then run autofill with the sample data
-  const coreJs = fs.readFileSync(path.join(EXT_PATH, 'core.js'), 'utf8');
-  await formPage.evaluate(coreJs);
-
-  await formPage.evaluate(userData => {
-    const inputs = document.querySelectorAll(
-      'input[type="text"], input[type="email"], input[type="tel"], input[type="url"], textarea, select'
-    );
-    inputs.forEach(input => {
-      let labelText = '';
-      if (input.id) {
-        const label = document.querySelector(`label[for="${input.id}"]`);
-        if (label) labelText = label.innerText;
-      }
-      const targetString = normalize(
-        input.name + ' ' + input.id + ' ' + (input.placeholder || '') + ' ' + labelText
-      );
-      let bestMatchKey = null;
-      let lowestDistance = Infinity;
-      for (const key of Object.keys(userData)) {
-        const normalizedKey = normalize(key);
-        if (targetString.includes(normalizedKey)) { bestMatchKey = key; break; }
-        const distance = getEditDistance(targetString, normalizedKey);
-        if (distance < 3 && distance < lowestDistance) { lowestDistance = distance; bestMatchKey = key; }
-      }
-      if (bestMatchKey) {
-        if (input.tagName === 'SELECT') {
-          const opt = findBestOption(input, userData[bestMatchKey]);
-          if (opt) { input.value = opt.value; input.dispatchEvent(new Event('change', { bubbles: true })); }
-        } else {
-          input.value = userData[bestMatchKey];
-          input.dispatchEvent(new Event('input', { bubbles: true }));
-          input.dispatchEvent(new Event('change', { bubbles: true }));
-        }
-      }
-    });
+  // Run the real core.js + content.js against the mock form, with
+  // chrome.storage stubbed to return the sample data
+  await formPage.evaluate(mappings => {
+    window.chrome = { storage: { local: { get: (key, cb) => cb({ userMappings: mappings }) } } };
   }, SAMPLE_MAPPINGS);
+  const autofillDone = formPage.waitForEvent('console', msg => msg.text() === 'Fuzzy Autofill complete!');
+  await formPage.addScriptTag({ path: path.join(EXT_PATH, 'core.js') });
+  await formPage.addScriptTag({ path: path.join(EXT_PATH, 'content.js') });
+  await autofillDone;
 
   await formPage.screenshot({ path: path.join(OUT_DIR, 'autofill-in-use.jpg'), type: 'jpeg', quality: 95 });
   console.log('✓ screenshots/autofill-in-use.jpg');
