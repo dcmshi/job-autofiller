@@ -62,7 +62,22 @@ var KEY_ALIASES = {
   'github':           [],
   'personal website': ['website', 'personal site', 'homepage'],
   'portfolio':        [],
+  'authorized to work':  ['work authorization', 'eligible to work', 'right to work', 'legally eligible'],
+  'require sponsorship': ['sponsorship', 'require visa', 'need a visa'],
+  'how did you hear':    ['hear about', 'heard about', 'how did you find', 'referral source'],
 };
+
+// Aliases that only count when they are the entire label/name/id — a field
+// labelled just "Name" wants the full name, but "Name of your manager" doesn't
+var WHOLE_SIGNAL_ALIASES = {
+  'full name': ['name', 'your name'],
+};
+
+// Free-text fields whose label runs longer than this are questions, not
+// field names ("Share your open-source contributions (GitHub PRs...)"), so a
+// key word appearing in them isn't trusted. Selects and radios are exempt —
+// their options already guard against a wrong match.
+var LONG_LABEL_WORDS = 10;
 
 // HTML autocomplete tokens -> canonical key. These declare exactly what a
 // field is, so they outrank every text-based signal.
@@ -97,6 +112,21 @@ function canonicalKey(normalizedKey) {
   return null;
 }
 
+// Fill in values forms commonly ask for that can be built from the user's
+// other values — currently "full name" from first + last name
+function withDerivedValues(userData) {
+  const data = { ...userData };
+  const byCanonical = {};
+  for (const [key, value] of Object.entries(data)) {
+    const canonical = canonicalKey(normalize(key));
+    if (canonical && String(value ?? '').trim()) byCanonical[canonical] = String(value).trim();
+  }
+  if (!byCanonical['full name'] && byCanonical['first name'] && byCanonical['last name']) {
+    data['full name'] = `${byCanonical['first name']} ${byCanonical['last name']}`;
+  }
+  return data;
+}
+
 // Precompute normalized terms once per run instead of once per field.
 // Keys with empty values are dropped so unfilled defaults never blank a field.
 function prepareKeys(userData) {
@@ -111,14 +141,23 @@ function prepareKeys(userData) {
       for (const alias of [canonical, ...KEY_ALIASES[canonical]]) {
         if (alias !== normalized) terms.push({ term: alias, factor: ALIAS_FACTOR, fuzzy: false });
       }
+      for (const alias of WHOLE_SIGNAL_ALIASES[canonical] || []) {
+        terms.push({ term: alias, factor: ALIAS_FACTOR, fuzzy: false, whole: true });
+      }
     }
     prepared.push({ key, normalized, canonical, terms });
   }
   return prepared;
 }
 
-// Normalize the raw text describing a field into the signals findBestKey scores
-function buildSignals({ name, id, placeholder, label, autocomplete } = {}) {
+function isLongQuestion(label) {
+  return normalize(label).split(' ').length > LONG_LABEL_WORDS;
+}
+
+// Normalize the raw text describing a field into the signals findBestKey scores.
+// `freeText` marks text inputs/textareas, whose long question labels are ignored.
+function buildSignals({ name, id, placeholder, label, autocomplete, freeText = false } = {}) {
+  if (freeText && isLongQuestion(label)) label = '';
   let autocompleteKey = null;
   for (const token of String(autocomplete ?? '').toLowerCase().split(/\s+/)) {
     if (AUTOCOMPLETE_KEYS[token]) autocompleteKey = AUTOCOMPLETE_KEYS[token];
@@ -140,9 +179,11 @@ function buildSignals({ name, id, placeholder, label, autocomplete } = {}) {
 // and never for aliases, where abbreviations like "fname" sit one edit from "name".
 // A tiny penalty per starting word breaks ties toward the earlier word, which
 // is usually the specific one ("Email Address", "Location (City)").
-function termMatch(text, term, allowFuzzy = true) {
+// With `whole`, the term must be the entire text.
+function termMatch(text, term, allowFuzzy = true, whole = false) {
   if (!text) return 0;
   const target = term.replace(/ /g, '');
+  if (whole) return text.replace(/ /g, '') === target ? 1 : 0;
   const allowed = !allowFuzzy ? 0 : target.length >= 8 ? 2 : target.length >= 5 ? 1 : 0;
   const tokens = text.split(' ');
   let best = 0;
@@ -169,29 +210,27 @@ function scoreKey(signals, preparedKey) {
   }
   for (const [signal, weight] of Object.entries(SIGNAL_WEIGHTS)) {
     let best = 0;
-    for (const { term, factor, fuzzy } of preparedKey.terms) {
-      best = Math.max(best, factor * termMatch(signals[signal], term, fuzzy));
+    for (const { term, factor, fuzzy, whole } of preparedKey.terms) {
+      best = Math.max(best, factor * termMatch(signals[signal], term, fuzzy, whole));
     }
     score += weight * best;
   }
   return score;
 }
 
-// Highest-scoring key wins; ties go to the longer (more specific) key, so
-// "linkedin profile" beats "linkedin" on a "LinkedIn Profile" field.
+// Every key that matches the signals at all, best first. Ties go to the longer
+// (more specific) key, so "linkedin profile" beats "linkedin" on a
+// "LinkedIn Profile" field, then to the earlier key.
+function rankKeys(signals, preparedKeys) {
+  return preparedKeys
+    .map(preparedKey => ({ preparedKey, score: scoreKey(signals, preparedKey) }))
+    .filter(r => r.score > 0)
+    .sort((a, b) => b.score - a.score || b.preparedKey.normalized.length - a.preparedKey.normalized.length)
+    .map(r => r.preparedKey.key);
+}
+
 function findBestKey(signals, preparedKeys) {
-  let bestKey = null;
-  let bestScore = 0;
-  let bestLength = 0;
-  for (const preparedKey of preparedKeys) {
-    const score = scoreKey(signals, preparedKey);
-    if (score > bestScore || (score > 0 && score === bestScore && preparedKey.normalized.length > bestLength)) {
-      bestKey = preparedKey.key;
-      bestScore = score;
-      bestLength = preparedKey.normalized.length;
-    }
-  }
-  return bestKey;
+  return rankKeys(signals, preparedKeys)[0] ?? null;
 }
 
 // Match the user's value against a <select> (or any list of { text, value }
@@ -236,8 +275,8 @@ function findBestOption(selectOrOptions, userValue) {
 // Export for Node.js (tests) — no-op in the browser
 if (typeof module !== 'undefined') {
   module.exports = {
-    getEditDistance, normalize, splitCamelCase, canonicalKey, prepareKeys,
-    buildSignals, termMatch, scoreKey, findBestKey, findBestOption,
-    KEY_ALIASES, AUTOCOMPLETE_KEYS,
+    getEditDistance, normalize, splitCamelCase, canonicalKey, withDerivedValues,
+    prepareKeys, isLongQuestion, buildSignals, termMatch, scoreKey, rankKeys,
+    findBestKey, findBestOption, KEY_ALIASES, AUTOCOMPLETE_KEYS,
   };
 }

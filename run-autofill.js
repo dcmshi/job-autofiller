@@ -96,7 +96,14 @@ async function report(page) {
         .map(el => {
           const label = (el.labels && el.labels[0] && el.labels[0].textContent)
             || el.getAttribute('aria-label') || el.name || el.id || el.placeholder || '(unlabelled)';
-          const value = el.tagName === 'SELECT' ? (el.selectedOptions[0] || {}).text || '' : el.value;
+          let value = el.value;
+          // A selected option with an empty value is a "Select..." placeholder
+          if (el.tagName === 'SELECT') value = el.value ? el.selectedOptions[0].text : '';
+          // react-select keeps the input empty and shows the choice in a sibling
+          if (!value && el.getAttribute('role') === 'combobox') {
+            const shown = el.closest('[class*="container"]')?.querySelector('[class*="single-value"]');
+            value = shown ? shown.textContent : '';
+          }
           return { label: label.replace(/\s+/g, ' ').trim().slice(0, 50), value };
         }));
       // One row per radio group: the question (fieldset legend or name) and the checked option
@@ -176,6 +183,15 @@ async function run() {
   let [sw] = context.serviceWorkers();
   if (!sw) sw = await context.waitForEvent('serviceworker');
   await sw.evaluate(m => chrome.storage.local.set({ userMappings: m }), mappings);
+
+  // Bot protection (e.g. CloudFront on Welcome to the Jungle) rejects the
+  // "HeadlessChrome" user agent, so present the regular one
+  if (args.headless) {
+    const probe = await context.newPage();
+    const userAgent = (await probe.evaluate(() => navigator.userAgent)).replace('HeadlessChrome', 'Chrome');
+    await probe.close();
+    await context.setExtraHTTPHeaders({ 'User-Agent': userAgent });
+  }
 
   const page = context.pages()[0] || await context.newPage();
   await page.goto(args.url, { waitUntil: 'load' });

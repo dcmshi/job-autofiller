@@ -1,5 +1,5 @@
 // core.js is injected before this file and provides:
-// normalize, prepareKeys, buildSignals, findBestKey, findBestOption
+// normalize, withDerivedValues, prepareKeys, buildSignals, rankKeys, findBestOption
 // Only `function` / `var` at the top level so a second injection doesn't throw.
 
 // Checked against element.type, which reports "text" for <input> with a
@@ -22,13 +22,18 @@ function getFillableFields(root) {
   );
 }
 
-// Text inside `container` that isn't inside any of the `excluded` elements
-// (e.g. the field itself, so a wrapped <select> doesn't contribute its options)
+// Visible text inside `container` that isn't inside any of the `excluded`
+// elements (e.g. the field itself, so a wrapped <select> doesn't contribute its
+// options). Hidden text — validation errors, loading messages — is skipped.
 function getOwnText(container, ...excluded) {
   const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
   let text = '';
   while (walker.nextNode()) {
-    if (!excluded.some(el => el.contains(walker.currentNode))) text += ' ' + walker.currentNode.textContent;
+    const node = walker.currentNode;
+    if (excluded.some(el => el.contains(node))) continue;
+    const parent = node.parentElement;
+    if (parent && parent.checkVisibility && !parent.checkVisibility({ visibilityProperty: true })) continue;
+    text += ' ' + node.textContent;
   }
   return text.trim().slice(0, MAX_LABEL_LENGTH);
 }
@@ -55,7 +60,10 @@ function getLabelText(el) {
   // Covers both <label for="..."> and <label> wrapping the field
   for (const label of el.labels || []) parts.push(getOwnText(label, el));
   parts.push(getAriaText(el));
-  if (parts.some(p => p.trim())) return parts.join(' ');
+  // The same text often arrives via both <label for> and aria-labelledby
+  const unique = [...new Set(parts.map(p => p.trim()).filter(Boolean))]
+    .filter((p, i, all) => !all.some((other, j) => j !== i && normalize(other).includes(normalize(p)) && other.length > p.length));
+  if (unique.length) return unique.join(' ');
 
   // A <legend> only describes this field if the fieldset holds nothing else
   const fieldset = el.closest('fieldset');
@@ -113,11 +121,16 @@ function fillText(el, value) {
   el.dispatchEvent(new Event('change', { bubbles: true }));
 }
 
-function fillSelect(el, value) {
-  const bestOption = findBestOption(el, value);
-  if (!bestOption) return;
-  setNativeValue(el, bestOption.value);
-  el.dispatchEvent(new Event('change', { bubbles: true }));
+// Tries each candidate value in turn (best-matching key first) and selects
+// the first one that matches an option
+function fillSelect(el, values) {
+  for (const value of values) {
+    const bestOption = findBestOption(el, value);
+    if (!bestOption) continue;
+    setNativeValue(el, bestOption.value);
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+    return;
+  }
 }
 
 // Resolves with check()'s first truthy result, or null after timeoutMs.
@@ -234,38 +247,46 @@ function shouldSkipRadioGroup(radios) {
   return !visible || radios.every(r => r.disabled);
 }
 
-function fillRadioGroup(radios, value) {
+// Like fillSelect: the first candidate value that matches an option wins
+function fillRadioGroup(radios, values) {
   const options = radios
     .filter(r => !r.disabled)
     .map(r => ({ text: getRadioOptionText(r), value: r.value, el: r }));
-  const best = findBestOption(options, value);
-  // click() checks the radio and fires click/input/change like a real click
-  if (best && !best.el.checked) best.el.click();
+  for (const value of values) {
+    const best = findBestOption(options, value);
+    if (!best) continue;
+    // click() checks the radio and fires click/input/change like a real click
+    if (!best.el.checked) best.el.click();
+    return;
+  }
 }
 
-async function autofill(userData) {
+async function autofill(rawUserData) {
+  const userData = withDerivedValues(rawUserData);
   const preparedKeys = prepareKeys(userData);
   const comboboxes = [];
 
   for (const el of getFillableFields(document)) {
     if (shouldSkip(el)) continue;
 
+    const isCombobox = el.getAttribute('role') === 'combobox';
     const signals = buildSignals({
       name:         el.getAttribute('name'),
       id:           el.id,
       placeholder:  el.getAttribute('placeholder'),
       label:        getLabelText(el),
       autocomplete: el.getAttribute('autocomplete'),
+      freeText:     el.tagName !== 'SELECT' && !isCombobox,
     });
-    const key = findBestKey(signals, preparedKeys);
-    if (!key) continue;
+    const keys = rankKeys(signals, preparedKeys);
+    if (!keys.length) continue;
 
-    if (el.getAttribute('role') === 'combobox') {
-      comboboxes.push([el, userData[key]]);
+    if (isCombobox) {
+      comboboxes.push([el, userData[keys[0]]]);
     } else if (el.tagName === 'SELECT') {
-      fillSelect(el, userData[key]);
+      fillSelect(el, keys.map(key => userData[key]));
     } else {
-      fillText(el, userData[key]);
+      fillText(el, userData[keys[0]]);
     }
   }
 
@@ -275,8 +296,8 @@ async function autofill(userData) {
       name:  radios[0].name,
       label: getRadioGroupQuestion(radios),
     });
-    const key = findBestKey(signals, preparedKeys);
-    if (key) fillRadioGroup(radios, userData[key]);
+    const keys = rankKeys(signals, preparedKeys);
+    if (keys.length) fillRadioGroup(radios, keys.map(key => userData[key]));
   }
 
   // One at a time — open menus would otherwise compete for the same listbox

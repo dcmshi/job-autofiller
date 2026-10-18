@@ -1,8 +1,9 @@
 const { test, describe } = require('node:test');
 const assert = require('node:assert/strict');
 const {
-  getEditDistance, normalize, splitCamelCase, canonicalKey, prepareKeys,
-  buildSignals, termMatch, findBestKey, findBestOption,
+  getEditDistance, normalize, splitCamelCase, canonicalKey, withDerivedValues,
+  prepareKeys, isLongQuestion, buildSignals, termMatch, rankKeys, findBestKey,
+  findBestOption,
 } = require('../core.js');
 
 // Helper to build a minimal select mock
@@ -446,5 +447,120 @@ describe('findBestOption: exact, whole-word, then length-scaled fuzzy', () => {
     const select = mockSelect([['Intermediate', '1'], ['Fluent', '2']]);
     assert.equal(findBestOption(select, 'Intermediat').value, '1');
     assert.equal(findBestOption(mockSelect([['Canada', 'CA']]), 'Canda').value, 'CA');
+  });
+});
+
+// ------------------------------------------------------------
+// Findings from live ATS forms (Workable, Lever, Ashby, Greenhouse)
+// ------------------------------------------------------------
+describe('rankKeys: fallback order for option fields', () => {
+  test('returns every matching key, best first', () => {
+    const keys = prepareKeys({ 'country': 'Canada', 'authorized to work': 'Yes', 'email': 'x' });
+    const signals = buildSignals({ label: 'Are you eligible to work in the country you are applying?' });
+    assert.deepEqual(rankKeys(signals, keys), ['country', 'authorized to work']);
+  });
+
+  test('findBestKey is the first ranked key', () => {
+    const keys = prepareKeys({ 'linkedin': 'a', 'linkedin profile': 'b' });
+    const signals = buildSignals({ label: 'LinkedIn Profile' });
+    assert.equal(findBestKey(signals, keys), rankKeys(signals, keys)[0]);
+  });
+
+  test('no matching keys gives an empty list', () => {
+    assert.deepEqual(rankKeys(buildSignals({ label: 'Favourite colour' }), prepareKeys({ email: 'x' })), []);
+  });
+});
+
+describe('Screening-question synonyms', () => {
+  const keys = ['authorized to work', 'require sponsorship', 'how did you hear'];
+  test('eligible / right to work -> authorized to work', () => {
+    assert.equal(matchField({ label: 'Are you legally eligible to work in Canada?' }, keys), 'authorized to work');
+    assert.equal(matchField({ label: 'Do you have the right to work in the UK?' }, keys), 'authorized to work');
+  });
+
+  test('visa sponsorship -> require sponsorship', () => {
+    assert.equal(matchField({ label: 'Will you now or in the future need visa sponsorship?' }, keys), 'require sponsorship');
+  });
+
+  test('"hear about us" -> how did you hear', () => {
+    assert.equal(matchField({ label: 'Where did you hear about us?' }, keys), 'how did you hear');
+  });
+
+  test('a user key named "work authorization" picks up the group', () => {
+    assert.equal(matchField({ label: 'Are you authorized to work in the US?' }, ['work authorization']), 'work authorization');
+  });
+});
+
+describe('Full name derived from first + last name', () => {
+  test('adds "full name" when only first and last are given', () => {
+    assert.equal(withDerivedValues({ 'first name': 'Jane', 'last name': 'Doe' })['full name'], 'Jane Doe');
+  });
+
+  test('works with alias keys like "given name" / "surname"', () => {
+    assert.equal(withDerivedValues({ 'given name': 'Jane', 'surname': 'Doe' })['full name'], 'Jane Doe');
+  });
+
+  test("never overrides the user's own full name", () => {
+    const data = withDerivedValues({ 'first name': 'Jane', 'last name': 'Doe', 'legal name': 'Jane Q. Doe' });
+    assert.equal(data['full name'], undefined);
+    assert.equal(data['legal name'], 'Jane Q. Doe');
+  });
+
+  test('fills in an empty "full name" default', () => {
+    assert.equal(withDerivedValues({ 'full name': '', 'first name': 'Jane', 'last name': 'Doe' })['full name'], 'Jane Doe');
+  });
+
+  test('needs both first and last name', () => {
+    assert.equal(withDerivedValues({ 'first name': 'Jane' })['full name'], undefined);
+  });
+
+  test('does not modify the original object', () => {
+    const original = { 'first name': 'Jane', 'last name': 'Doe' };
+    withDerivedValues(original);
+    assert.equal(original['full name'], undefined);
+  });
+});
+
+describe('Whole-signal aliases ("Name" means full name only on its own)', () => {
+  const keys = ['first name', 'last name', 'full name', 'previous company'];
+  test('a field labelled just "Name" or "Full name" gets the full name', () => {
+    assert.equal(matchField({ label: 'Name' }, keys), 'full name');
+    assert.equal(matchField({ label: 'Full name ✱' }, keys), 'full name');
+    assert.equal(matchField({ name: 'name' }, keys), 'full name');
+  });
+
+  test('"First Name" / "Last Name" still win over full name', () => {
+    assert.equal(matchField({ label: 'First Name' }, keys), 'first name');
+    assert.equal(matchField({ label: 'Last Name' }, keys), 'last name');
+  });
+
+  test('"name" inside a longer label does not mean full name', () => {
+    assert.equal(matchField({ label: 'What is the name of your current manager?' }, keys), null);
+    assert.equal(matchField({ label: 'Company name' }, keys), null);
+  });
+});
+
+describe('Long question labels on free-text fields', () => {
+  const question = 'Share 2–3 of your open-source contributions with links (GitHub PRs, issues, or projects you maintained)';
+
+  test('isLongQuestion counts words after normalizing', () => {
+    assert.equal(isLongQuestion('GitHub profile'), false);
+    assert.equal(isLongQuestion(question), true);
+  });
+
+  test('a long question label is ignored on a free-text field', () => {
+    assert.equal(matchField({ label: question, freeText: true }), null);
+  });
+
+  test('the same label still counts for selects and radios', () => {
+    assert.equal(matchField({ label: question }), 'github');
+  });
+
+  test('name/id still match when the label is dropped', () => {
+    assert.equal(matchField({ name: 'location', label: 'Current location No location found Try entering a different location Loading please wait', freeText: true }), 'location');
+  });
+
+  test('short labels on free-text fields are unaffected', () => {
+    assert.equal(matchField({ label: 'Github profile', freeText: true }), 'github');
   });
 });

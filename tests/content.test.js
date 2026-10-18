@@ -529,3 +529,73 @@ describe('Radio buttons', () => {
     await page.close();
   });
 });
+
+describe('Patterns from live ATS forms', () => {
+  const ATS_MAPPINGS = { ...MAPPINGS, 'authorized to work': 'Yes', 'github': 'github.com/jane' };
+  const run = html => runAutofill(html, { mappings: ATS_MAPPINGS });
+
+  test('Workable: radio falls back to the next key when the best key has no matching option', async () => {
+    const page = await run(`
+      <fieldset><legend>Are you eligible to work in the country you are applying?</legend>
+        <label><input type="radio" name="CA_10628" value="true"> YES</label>
+        <label><input type="radio" name="CA_10628" value="false"> NO</label>
+      </fieldset>
+    `);
+    assert.equal(await page.$eval('input[name=CA_10628]:checked', r => r.value).catch(() => null), 'true');
+    await page.close();
+  });
+
+  test('select falls back to the next key the same way', async () => {
+    const page = await run(`
+      <label for="s">Are you eligible to work in this country?</label>
+      <select id="s"><option value="">Select...</option><option>Yes</option><option>No</option></select>
+    `);
+    assert.equal(await valueOf(page, '#s'), 'Yes');
+    await page.close();
+  });
+
+  test('Workable: a long essay question mentioning GitHub is left empty', async () => {
+    const page = await run(`
+      <label for="q1">Share 2–3 of your open-source contributions with links (GitHub PRs, issues, or projects you maintained)</label>
+      <textarea id="q1" name="QA_11857982"></textarea>
+      <label for="q2">Github profile</label><textarea id="q2" name="CA_47143"></textarea>
+    `);
+    assert.equal(await valueOf(page, '#q1'), '');
+    assert.equal(await valueOf(page, '#q2'), 'github.com/jane');
+    await page.close();
+  });
+
+  test('Lever "Full name" and Ashby "Name" get first + last name', async () => {
+    const page = await run(`
+      <div class="application-question"><div class="application-label">Full name<span>✱</span></div>
+        <div class="application-field"><input type="text" name="name" id="lever"></div></div>
+      <label for="_systemfield_name">Name</label><input id="_systemfield_name" name="_systemfield_name">
+      <label for="mgr">What is the name of your current manager?</label><input id="mgr">
+    `);
+    assert.equal(await valueOf(page, '#lever'), 'Jane Doe');
+    assert.equal(await valueOf(page, '#_systemfield_name'), 'Jane Doe');
+    assert.equal(await valueOf(page, '#mgr'), '');
+    await page.close();
+  });
+
+  test('Lever: hidden validation text in the label is ignored', async () => {
+    const page = await run(`
+      <label>Current location
+        <span class="error" style="display:none">No location found. Try entering a different location</span>
+        <input type="text" id="loc" name="q_7">
+      </label>
+    `);
+    assert.equal(await valueOf(page, '#loc'), 'Toronto, ON');
+    await page.close();
+  });
+
+  test('Greenhouse: label text repeated via aria-labelledby is counted once', async () => {
+    // 7 words; doubled it would look like a 14-word question and be ignored
+    const page = await run(`
+      <label id="lbl" for="q">Please share your LinkedIn profile URL here</label>
+      <input id="q" aria-labelledby="lbl">
+    `);
+    assert.equal(await valueOf(page, '#q'), 'linkedin.com/in/jane');
+    await page.close();
+  });
+});
